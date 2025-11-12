@@ -1,0 +1,389 @@
+{
+  "name": "Negative SDR",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "MessageID"
+            },
+            {
+              "name": "CompanyName"
+            },
+            {
+              "name": "From"
+            },
+            {
+              "name": "Stage"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        128,
+        0
+      ],
+      "id": "11ffb6c8-2a8d-4b05-ac65-68c07af31d2e",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "app6arNuFYYMX4N2T",
+          "mode": "list",
+          "cachedResultName": "AI SDR",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltJahuM8klVjeOy",
+          "mode": "list",
+          "cachedResultName": "Negative Replies",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T/tbltJahuM8klVjeOy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "From": "={{ $('When Executed by Another Workflow').item.json.From }}",
+            "MessageID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "Stage": "={{ $('When Executed by Another Workflow').item.json.Stage }}",
+            "Company/Client Name": "={{ $json.CompanyName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company/Client Name",
+              "displayName": "Company/Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        384,
+        0
+      ],
+      "id": "6e4a6cea-2cb5-450d-b2a2-9f949e811ab1",
+      "name": "Create a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "897n6kNU7VPas56t",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "Lost",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a00c0df7-f9ff-4519-9d63-dcaa38a1e782"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "22c97d48-37d0-405e-b65c-670340cbc6a5",
+                    "leftValue": "FFU",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c4eeda84-f6f4-4a4c-9260-c4ccbe154193",
+                    "leftValue": "DNC",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        624,
+        -16
+      ],
+      "id": "0aafe574-b67c-4476-84a0-abc6641faca4",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+        "labelIds": [
+          "Label_8771079409029748904"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "7500282d-ead9-4cb9-80ca-fb66394b0142",
+      "name": "Add label to message",
+      "webhookId": "d3cbe48a-5dd0-40ae-806a-0d391937ac46",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+        "labelIds": [
+          "Label_4418517162109602977"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "3dba5a24-f4e2-4340-9d87-542014d3ece7",
+      "name": "Add label to message1",
+      "webhookId": "d3cbe48a-5dd0-40ae-806a-0d391937ac46",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+        "labelIds": [
+          "Label_147682016645984548"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        160
+      ],
+      "id": "e451c0bd-4411-492e-87a1-0caa18341af9",
+      "name": "Add label to message2",
+      "webhookId": "d3cbe48a-5dd0-40ae-806a-0d391937ac46",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Label Nodes\n“Automatically labels emails in Gmail (e.g., ‘LOST’, ‘FFU’, ‘DNC’) to keep the inbox organized.”",
+        "height": 560,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -256
+      ],
+      "id": "d1634712-17cc-4f78-9dbc-a513cde70cca",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "## Airtable (Negative)\n“Saves all classified emails with stage, sender, and company name into respective Airtable tables for easy tracking.”",
+        "height": 336,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -192
+      ],
+      "id": "559ce616-4e80-4fbe-bbdf-f1817fbb0b51",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## Switch Nodes\n“Route logic — determines the next step based on the stage (e.g. Lost → FFU → DNC).”",
+        "height": 336,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -192
+      ],
+      "id": "70e2ef82-f39c-446b-a810-67d2400b5ade",
+      "name": "Sticky Note19"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Create a record1": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add label to message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add label to message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Create a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3455873a-eabd-49f7-b05e-1b75bb8067de",
+  "meta": {
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "wrutfqmO9o8vu5PX",
+  "tags": []
+}

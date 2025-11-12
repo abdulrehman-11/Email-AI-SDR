@@ -1,0 +1,590 @@
+{
+  "name": "reply_agent",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Below are the following items:\\nTo: {{ $('When Executed by Another Workflow').item.json.To }}\\nEmail drafted by the AI Agent Previously: {{ $('When Executed by Another Workflow').item.json.Draft }}\\nChunks: {{ $('When Executed by Another Workflow').item.json.Chunks }}\\nFeedback Received by the user: {{ $json.data.Feedback }}\\n-Now regenerate this email based on the feedback received from the user. The rest of the content should remain unchanged — only update the parts mentioned in the feedback.\\n- Write the email as a **final version**, ready to send (NO PLACEHOLDERS LIKE [INSERT LINK] OR COMMENT LIKE “IF AVAILIBLE”).\\n-Subject shouldn't be included\\n\\n*Rewrite the entire email as a complete, natural, and professional final version. Keep the original context and tone from the previous draft but improve only where feedback suggests. Do not include or mention the feedback itself, and ensure the output is a polished, human-written email ready to send.*\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        144,
+        256
+      ],
+      "id": "64351db7-01f9-4bc9-b417-52526ed2dab5",
+      "name": "AI Agent1",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        144,
+        384
+      ],
+      "id": "3848a2ea-50f3-4d1b-80a0-e36018f58ca3",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g3RIMm29hvfDVdvv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09GFHFQWAE",
+          "mode": "list",
+          "cachedResultName": "ai-sdr"
+        },
+        "message": "=FIRST DRAFT:\nTo: {{ $json.To }}\nCompany's Name: {{ $json['Company\\'s Name'] }}\n\n{{ $json.Draft }}\n\nKindly Approve,Give Feedback or rewrite the draft. ",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Status",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Give Feedback"
+                  },
+                  {
+                    "option": "Disapprove (Write your own)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Feedback",
+              "fieldType": "textarea",
+              "placeholder": "enter your feedback here..."
+            },
+            {
+              "fieldLabel": "Write your own draft",
+              "fieldType": "textarea",
+              "placeholder": "write your draft..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -672,
+        272
+      ],
+      "id": "4a4db900-ee9a-45d4-b9cd-8e0e4a51229c",
+      "name": "FirstDraft Approval",
+      "webhookId": "8228ca80-e6ea-4aad-ac19-d76ada98fbf3",
+      "credentials": {
+        "slackApi": {
+          "id": "xULHgwgq7pfo5iVi",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "To"
+            },
+            {
+              "name": "Company's Name"
+            },
+            {
+              "name": "Draft"
+            },
+            {
+              "name": "Message_ID"
+            },
+            {
+              "name": "Chunks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        272
+      ],
+      "id": "2f9f1f81-df09-4ebf-8644-d8afe213f9c1",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.Status }}",
+                    "rightValue": "Approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "040d4ab9-fe01-45c3-b8b5-7db5ea6276c2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "362c429a-3416-45f1-93db-1f31ab98466a",
+                    "leftValue": "={{ $json.data.Status }}",
+                    "rightValue": "Give Feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9497e769-22d8-4e56-886c-b28a58d73899",
+                    "leftValue": "={{ $json.data.Status }}",
+                    "rightValue": "Disapprove (Write your own)",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -352,
+        256
+      ],
+      "id": "d7cea7d5-e2cd-47f6-afc4-a3fda12e9073",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        432
+      ],
+      "id": "1829fda8-6795-4fba-9fa6-2c8ac0c3a6b0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.Message_ID }}",
+        "emailType": "text",
+        "message": "={{ $('When Executed by Another Workflow').item.json.Draft }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        112
+      ],
+      "id": "7c2e5232-99c9-46c5-9817-1d7f15c50fe8",
+      "name": "Draft",
+      "webhookId": "accbb6a6-e17d-4de3-bb21-8fb881e8e8ad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.Message_ID }}",
+        "emailType": "text",
+        "message": "={{ $json.data['Final Draft'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        256
+      ],
+      "id": "f2d06ddb-5aca-447d-a418-72b08ad82a64",
+      "name": "Draft1",
+      "webhookId": "accbb6a6-e17d-4de3-bb21-8fb881e8e8ad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('When Executed by Another Workflow').item.json.Message_ID }}",
+        "emailType": "text",
+        "message": "={{ $('FirstDraft Approval').item.json.data['Write your own draft'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        656
+      ],
+      "id": "edffc1ad-c3f4-427a-b3cd-c7768cb8cba5",
+      "name": "Draft3",
+      "webhookId": "accbb6a6-e17d-4de3-bb21-8fb881e8e8ad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09GFHFQWAE",
+          "mode": "list",
+          "cachedResultName": "ai-sdr"
+        },
+        "message": "=SECOND DRAFT:\nTo: {{ $('When Executed by Another Workflow').item.json.To }}\nCompany's Name: {{ $('When Executed by Another Workflow').item.json['Company\\'s Name'] }}\n\n{{ $json.output }}\n\nPaste the Final Draft in the space below.",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Final Draft",
+              "fieldType": "textarea",
+              "placeholder": "Rewrite or paste the final draft..",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        496,
+        256
+      ],
+      "id": "fb1ee675-200b-483a-87b5-3d32bef6854b",
+      "name": "Send message and wait for response",
+      "webhookId": "1dea489b-8bed-4451-ab9f-ba2c336f36e8",
+      "credentials": {
+        "slackApi": {
+          "id": "xULHgwgq7pfo5iVi",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Trigger\nReceives the drafted email, recipient, and metadata from another workflow.",
+        "height": 272,
+        "width": 224,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1056,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "fd737fb9-4040-4c1b-a45e-2d6e3b3c223f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## First Review\nSends draft to Slack for approval, feedback, or rewrite.",
+        "height": 272,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        160
+      ],
+      "id": "a8826e05-d495-4041-9409-d8bf2068d580",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Routing \nBranches based on Slack response: send, revise, or rewrite.",
+        "height": 288,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        144
+      ],
+      "id": "db5f56e7-3760-4421-8630-f3419cf2d773",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Auto Send\nSends approved drafts directly via Gmail.",
+        "height": 272,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -128,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "d8f114fd-c33a-4630-ae1b-ef9fafc1fca6",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Feedback Revision\nUses Gemini to regenerate the draft based on reviewer feedback.",
+        "height": 352,
+        "width": 304,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        112,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "ba0eda83-9bd9-4828-ba1c-bf6d552bebff",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Final Check\nSends the revised draft to Slack for final confirmation.",
+        "height": 304,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        432,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "91c6db77-3f53-4178-a4ff-2257b2b0478a",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Final Send\nSends the approved final draft via Gmail.",
+        "height": 304,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        672,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "c6515291-2a09-4966-8bf3-ec22d71fef42",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Manual Draft\nHandles human-written drafts and sends them as final replies.",
+        "height": 304,
+        "width": 256,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        544
+      ],
+      "typeVersion": 1,
+      "id": "429ccc4e-609e-482c-8317-a61e53883014",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "To": "khurram mughal <mkfreelancer502@gmail.com>",
+          "Company's Name": "Hexaa",
+          "Draft": "Dear Khurram Mughal,\n\nI hope this email finds you well.\n\nWe are scheduling a meeting for you with the Hexaa team. The meeting is scheduled to take place on September 23, 2025, from 10:00 PM to 10:30 PM Pakistan Time.\n\nPlease find the converted meeting time in your local timezone below:\n\n**Date:** September 23, 2025\n**Time:** 10:00 PM to 10:30 PM Pakistan Time\n\nWe look forward to connecting with you then.\n\nSincerely,\n\nThe Hexaa Team\n",
+          "Message_ID": "19971e611dde1039",
+          "Chunks": null
+        }
+      }
+    ]
+  },
+  "connections": {
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FirstDraft Approval": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "FirstDraft Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Draft3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "Draft1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6d6bae52-4bb9-4c2d-a7bc-83ab0995613f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "79jaepRHa7th1LpY",
+  "tags": []
+}

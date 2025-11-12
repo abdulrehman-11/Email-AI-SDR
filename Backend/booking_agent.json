@@ -1,0 +1,780 @@
+{
+  "name": "booking_agent",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5bfd5aff-9110-4987-8748-cbb966b59b2f",
+              "leftValue": "={{ $json.available }}",
+              "rightValue": true,
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        16
+      ],
+      "id": "03aa5ccf-51be-40e2-ac91-24d8e1769e02",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.dev010@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.dev010@gmail.com"
+        },
+        "timeMin": "={{ $json.start_time }}",
+        "timeMax": "={{ $json.end_time }}",
+        "options": {
+          "outputFormat": "availability"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -1024,
+        16
+      ],
+      "id": "e0ea03d0-005f-47e6-8664-1ca25dab6ee3",
+      "name": "Check Availability",
+      "retryOnFail": false,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xWw9fSDWOmzMcbCR",
+          "name": "Google Calendar account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "From"
+            },
+            {
+              "name": "Company"
+            },
+            {
+              "name": "Approved Time"
+            },
+            {
+              "name": "MessageID"
+            },
+            {
+              "name": "Chunks"
+            },
+            {
+              "name": "client_timezone"
+            }
+          ]
+        }
+      },
+      "id": "94c35cad-5856-46df-b342-ac974fc8a563",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -1504,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66a81e9d-f4bb-4762-8c5b-7e4d906d0f1d",
+              "name": "=end_time",
+              "value": "={{ \n(() => {\n  const raw = ($json['Approved Time'] || '').toString().trim();\n  const date = new Date(raw);\n  if (isNaN(date)) return '';\n  const end = new Date(date.getTime() + 30 * 60 * 1000);\n  return end.toISOString().replace(/\\.\\d{3}Z$/, '');\n})()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "dd987c16-06f7-4e98-aa57-06e89418bb6d",
+              "name": "=start_time",
+              "value": "={{ \n(() => {\n  const raw = ($json['Approved Time'] || '').toString().trim();\n  const date = new Date(raw);\n  if (isNaN(date)) return '';\n  return date.toISOString().replace(/\\.\\d{3}Z$/, '');\n})()\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1248,
+        16
+      ],
+      "id": "ce361333-bb6a-42c9-a2fe-e9bc231d642d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=To: {{ $('When Executed by Another Workflow').item.json.From }}\n\nAvailability: {{ $json.available }}\n\nClient's Company: {{ $('When Executed by Another Workflow').item.json.Company }}\n\nStart Time (Pakistan Time): {{ $('Edit Fields').item.json.start_time }} (use this if the Availability is true)\n\nEnd Time (Pakistan Time): {{ $('Edit Fields').item.json.end_time }} (use this if the Availability is true)\n\nFrom: The Hexaa\n\nInstructions:\n\nConvert start_time and end_time from Pakistan Time to the client’s local timezone using the timezone value above. Ensure the conversion is fully accurate — follow all timezone standards and reflect the correct date and time as per 2025 (MAKE SURE TO USE THE CORRECT START AND END TIME AS PER THE AVAILABILITY, USE THE FALSE WHEN THE AVAILABILITY IS FALSE, DO THIS FOR BOTH START AND END TIME).\n\nDraft a professional and final version of an email to inform the client that a meeting is being scheduled between the converted start and end times in their local timezone. Don’t mention anything about Pakistan time (THE CONVERSION OF TIMEZONES SHOULD BE STRICTLY FOLLOWED ACCORDING TO THE ACTUAL DIFFERENCE BETWEEN PAKISTAN TIMEZONE AND THE PROVIDED TIMEZONE).\n\nThe email should be complete and ready to send.\n\nDo not use any placeholders or incomplete elements such as:\n[Client Name]\n[insert link]\n[meeting topic]\n\nOr any phrases like “if available”.\n\nUse the client’s name (their actual name, not “Dear Client”) and company dynamically from the To and Company fields provided above.\n\nDo not include a subject line; start from Dear....\n\nAt the end of the email, politely ask the client to confirm the meeting by adding a line such as:\n“Please confirm this meeting so we can book your meeting on our schedule.” Ensure the tone remains professional and courteous.\n\nAlso, make sure the meeting time mentioned in the email is displayed **only in the client’s local timezone** (using the value of `client_timezone`), written naturally — for example:\n“6:00 PM to 6:30 PM {{ $('When Executed by Another Workflow').item.json.client_timezone }}” instead of “6:00 PM to 6:30 PM Pakistan Time”.\n\nDo not include ISO or technical date formats (e.g., **2025-12-22T18:30:00**) in the email output.\n\nEnd the email with:\n**Best regards,  \nThe Hexaa**",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        0
+      ],
+      "id": "0c0dc88f-df12-4100-84d7-206a098b0a50",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "79jaepRHa7th1LpY",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/79jaepRHa7th1LpY",
+          "cachedResultName": "reply_agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Draft": "={{ $json.output }}",
+            "To": "={{ $('When Executed by Another Workflow').item.json.From }}",
+            "Company's Name": "={{ $('When Executed by Another Workflow').item.json.Company }}",
+            "Message_ID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Company's Name",
+              "displayName": "Company's Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Draft",
+              "displayName": "Draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Message_ID",
+              "displayName": "Message_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Chunks",
+              "displayName": "Chunks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        48
+      ],
+      "id": "d18cf2e0-ee4e-4dcd-a5c8-7128e872ce1b",
+      "name": "Execute Reply Agent"
+    },
+    {
+      "parameters": {
+        "content": "## Workflow Trigger\nStarts when another workflow sends lead info (name, company, approved time, ID) to initiate booking.",
+        "height": 320,
+        "width": 256,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1568,
+        -144
+      ],
+      "id": "b3d71731-e2ac-4cee-a660-85fb20285fa2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Time Conversion\nConverts the approved time into standardized start and end times (Pakistan Time) for processing.",
+        "height": 320,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        -144
+      ],
+      "id": "1bf3337b-99c7-4539-8d8b-f39088ecf583",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Availability Check\nChecks Google Calendar to confirm if the proposed slot is free.",
+        "height": 320,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -144
+      ],
+      "id": "433c9bd9-1312-45fb-9b85-0c9f9b53a4d2",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Branching\nRoutes to drafting if the slot is free, or to Slack if not.",
+        "height": 320,
+        "width": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        -144
+      ],
+      "id": "c1d26a42-68fc-4768-bace-c6e34c23a713",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## CRM Update\nSaves the confirmed time from Slack into Airtable for tracking.",
+        "height": 320,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -656,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "fff0bc3c-95b1-4784-a9ce-40b135eb9413",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Time Adjust\nRecalculates start/end times based on the new time provided.",
+        "height": 320,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -448,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "cc10f5fb-9e0f-46c1-9a4b-8a28e0e5067d",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Draft Generation\nUses Gemini to generate a finalized meeting email with proper timezone conversion.",
+        "height": 368,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -128,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "a6a1fc92-72f3-4d31-9838-b1a462da3ed8",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Handoff to Reply Agent\nPasses the drafted email to the reply agent for approval or sending.",
+        "height": 368,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        160,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "5ba4ae75-9643-4fb7-b27e-c4c7fc5e2006",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66a81e9d-f4bb-4762-8c5b-7e4d906d0f1d",
+              "name": "end_time",
+              "value": "={{ new Date(new Date($('Send message and wait for response').item.json.data.text).getTime() + (30 * 60000)).toISOString().replace('Z', '+05:00') }}",
+              "type": "string"
+            },
+            {
+              "id": "dd987c16-06f7-4e98-aa57-06e89418bb6d",
+              "name": "start_time",
+              "value": "={{ new Date(new Date($('Send message and wait for response').item.json.data.text).getTime() + (0)).toISOString().replace('Z', '+05:00') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -256,
+        240
+      ],
+      "id": "cb5c5a88-8ea8-4360-bc4c-609732fcb78a",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09GFHFQWAE",
+          "mode": "list",
+          "cachedResultName": "ai-sdr"
+        },
+        "message": "=Suggested Time: {{ $json['Approved Time'] }}\nThe time you suggested is not availible. Kindly suggest another time.\nFollow the format:\n2025-10-27T12:30:00\n\n\n",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -608,
+        240
+      ],
+      "id": "004d5d8f-335a-41a7-9ed2-3a4011561337",
+      "name": "Send message and wait for response",
+      "webhookId": "746425bf-8401-4012-926f-c7d52e5127f3",
+      "credentials": {
+        "slackApi": {
+          "id": "xULHgwgq7pfo5iVi",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "app6arNuFYYMX4N2T",
+          "mode": "list",
+          "cachedResultName": "AI SDR",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbla9rduxrTZlCN9g",
+          "mode": "list",
+          "cachedResultName": "Booking Information",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T/tbla9rduxrTZlCN9g"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "MessageID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "Confirmed Time": "={{ $json.data.text }}"
+          },
+          "matchingColumns": [
+            "MessageID"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company's Name",
+              "displayName": "Company's Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client's Suggested Time",
+              "displayName": "Client's Suggested Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timezone",
+              "displayName": "Timezone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Local Time",
+              "displayName": "Local Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Confirmed Time",
+              "displayName": "Confirmed Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        240
+      ],
+      "id": "c25507a9-8ff7-4def-9d13-d15966b03a72",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "897n6kNU7VPas56t",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "38f0eebb-4ba7-4f94-adb9-b90cdb416398",
+              "name": "end_time_utc",
+              "value": "={{ \n  $json.end_time && new Date($json.end_time).toString() !== 'Invalid Date'\n    ? new Date($json.end_time).toISOString().replace(/Z$/, '')\n    : null\n}}",
+              "type": "string"
+            },
+            {
+              "id": "961e30ac-7f46-4454-8939-7da4f98dac42",
+              "name": "start_time_utc",
+              "value": "={{ \n  $json.start_time && new Date($json.start_time).toString() !== 'Invalid Date'\n    ? new Date($json.start_time).toISOString().replace(/Z$/, '')\n    : null\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1264,
+        240
+      ],
+      "id": "d342e01c-9d7c-476a-9e28-a556b4228e64",
+      "name": "Format Times for Google"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert start and end times into proper ISO strings (Google Calendar standard)\nconst start = new Date($input.first().json.start_time_utc);\nconst end = new Date($input.first().json.end_time_utc);\n\nreturn [\n  {\n    json: {\n      start_time: start.toISOString(),\n      end_time: end.toISOString()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        240
+      ],
+      "id": "07fec4c6-4405-40b8-bac2-a1bd8a185f76",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fix for Google Calendar structure\nconst data = $input.first().json;\n\n// Check if Google Calendar returned any busy events\nlet busySlots = [];\n\n// Handle both response formats (for compatibility)\nif (Array.isArray(data.busy)) {\n  // Newer format from n8n\n  busySlots = data.busy;\n} else if (data.calendars) {\n  // Older format\n  const calendarId = Object.keys(data.calendars || {})[0];\n  busySlots = data.calendars?.[calendarId]?.busy || [];\n}\n\n// If there are any events, availability is false\nconst available = busySlots.length === 0;\n\nreturn [\n  {\n    json: {\n      available\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        240
+      ],
+      "id": "3a091fbb-05a1-4a4a-bb20-ec5aecbc2638",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        128
+      ],
+      "id": "d6d0bb17-111d-4936-b99d-c386ec4d7420",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g3RIMm29hvfDVdvv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Format Times for Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Execute Reply Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Times for Google": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d6fe888b-acac-463a-827c-55bf1dccaa4c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "3ieArqHpSkWcU6BS",
+  "tags": []
+}

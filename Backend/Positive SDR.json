@@ -1,0 +1,1168 @@
+{
+  "name": "Positive SDR",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "stage"
+            },
+            {
+              "name": "CompanyName"
+            },
+            {
+              "name": "From"
+            },
+            {
+              "name": "MessageID"
+            },
+            {
+              "name": "To"
+            },
+            {
+              "name": "SafeText"
+            },
+            {
+              "name": "client_time"
+            },
+            {
+              "name": "client_timezone"
+            },
+            {
+              "name": "pakistan_time"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "fbf35368-5940-46f9-8ade-c41054c9f874",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.responseText || $json.text || $json.candidates?.[0]?.content?.parts?.[0]?.text || $json.SafeText || '';\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\n// --- Helper: extract date in YYYY-MM-DD format ---\nfunction extractDate(text) {\n  if (!text) return null;\n  const iso = text.match(/\\d{4}-\\d{2}-\\d{2}/);\n  if (iso) return iso[0];\n\n  const named = text.match(/([A-Za-z]+)\\s+(\\d{1,2}),\\s*(\\d{4})/);\n  if (named) {\n    const date = new Date(`${named[1]} ${named[2]}, ${named[3]}`);\n    if (!isNaN(date)) return date.toISOString().split(\"T\")[0];\n  }\n  return null;\n}\n\n// --- Helper: extract and convert 12/24-hour/ISO time ---\nfunction extractAndConvertTime(text) {\n  if (!text) return null;\n\n  const matchISO = text.match(/T(\\d{2}):(\\d{2})(?::\\d{2})?/);\n  if (matchISO) return `${matchISO[1]}:${matchISO[2]}`;\n\n  const match12 = text.match(/(\\d{1,2}):(\\d{2})\\s*(AM|PM)/i);\n  if (match12) {\n    let [, hour, minute, period] = match12;\n    hour = parseInt(hour);\n    if (period.toUpperCase() === \"PM\" && hour < 12) hour += 12;\n    if (period.toUpperCase() === \"AM\" && hour === 12) hour = 0;\n    return `${hour.toString().padStart(2, '0')}:${minute}`;\n  }\n\n  const match24 = text.match(/\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b/);\n  if (match24) return match24[0];\n\n  return null;\n}\n\n// --- Helper: combine date + time into ISO format (no timezone) ---\nfunction buildISO(dateStr, timeStr) {\n  if (!dateStr || !timeStr) return null;\n  return `${dateStr}T${timeStr}:00`;\n}\n\ntry {\n  const parsed = JSON.parse(cleaned || \"{}\");\n\n  const datePart = extractDate(parsed.client_time || parsed.date || raw);\n  const timePart = extractAndConvertTime(parsed.client_time || raw);\n\n  const clientISO = buildISO(datePart, timePart);\n  // ✅ Fix: convert to proper Pakistan ISO time (+05:00)\n  const pakistanISO = clientISO\n    ? new Date(clientISO + 'Z').toISOString().replace('Z', '+05:00')\n    : null;\n\n  return [\n    {\n      json: {\n        intent: $input.first().json.stage || parsed.stage || null,\n        client_time: clientISO || parsed.client_time || $input.first().json.client_time || null,\n        client_timezone: parsed.client_timezone || $input.first().json.client_timezone || \"UTC+05:00\",\n        pakistan_time: pakistanISO || parsed.pakistan_time || $input.first().json.pakistan_time || null\n      }\n    }\n  ];\n} catch (e) {\n  const datePart = extractDate(raw);\n  const timePart = extractAndConvertTime(raw);\n  const clientISO = buildISO(datePart, timePart);\n\n  const pakistanISO = clientISO\n    ? new Date(clientISO + 'Z').toISOString().replace('Z', '+05:00')\n    : null;\n\n  return [\n    {\n      json: {\n        intent: $input.first().json.stage || null,\n        client_time: clientISO || $input.first().json.client_time || null,\n        client_timezone: $input.first().json.client_timezone || \"UTC+05:00\",\n        pakistan_time: pakistanISO || $input.first().json.pakistan_time || null\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "7098637b-b30e-402d-a40a-9d222cb0b05c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "Meeting Request",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a00c0df7-f9ff-4519-9d63-dcaa38a1e782"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "22c97d48-37d0-405e-b65c-670340cbc6a5",
+                    "leftValue": "Info Request",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c4eeda84-f6f4-4a4c-9260-c4ccbe154193",
+                    "leftValue": "Slot Confirmation",
+                    "rightValue": "={{ $json.fields.Stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        528,
+        -16
+      ],
+      "id": "2ea1e309-49d7-4a27-8c88-a393f05008f0",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.fields.MessageID }}",
+        "labelIds": [
+          "Label_5377069719553799732"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        848,
+        -336
+      ],
+      "id": "8e20b19f-6ba3-4517-a2e7-ab7b826acee5",
+      "name": "Add label to message",
+      "webhookId": "4845b603-58b4-498b-afac-28fa4444a694",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.fields.MessageID }}",
+        "labelIds": [
+          "Label_8371916787449492187"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        848,
+        0
+      ],
+      "id": "3e892d1d-61b5-4e06-a89a-9c822033f3f3",
+      "name": "Add label to message1",
+      "webhookId": "4845b603-58b4-498b-afac-28fa4444a694",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.fields.MessageID }}",
+        "labelIds": [
+          "Label_4271808734417140496"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        448
+      ],
+      "id": "98e28c3c-4ee8-4d7b-a280-ddbf7a8ea607",
+      "name": "Add label to message2",
+      "webhookId": "4845b603-58b4-498b-afac-28fa4444a694",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09GFHFQWAE",
+          "mode": "list",
+          "cachedResultName": "ai-sdr"
+        },
+        "message": "=Kindly Provide the Meeting time for the following Client:\nCompany's Name: {{ $('Airtable (Positive)').item.json.fields['Company\\'s Name'] }}\nClient: {{ $('Airtable (Positive)').item.json.fields.From }}\nClient's Suggested Time: {{ $('Code in JavaScript').item.json.client_time }}\nTimeZone: {{ $('Code in JavaScript').item.json.client_timezone }}\nLocal Time: {{ $('Code in JavaScript').item.json.pakistan_time }}\nKindly strictly follow the following format for the time: 2025-10-22T12:30:00",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        -336
+      ],
+      "id": "354dee4d-767b-45a4-a4da-84f1f483ceed",
+      "name": "Send message and wait for response",
+      "webhookId": "1dea489b-8bed-4451-ab9f-ba2c336f36e8",
+      "credentials": {
+        "slackApi": {
+          "id": "xULHgwgq7pfo5iVi",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "3ieArqHpSkWcU6BS",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3ieArqHpSkWcU6BS",
+          "cachedResultName": "booking_agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "From": "={{ $('Create or update a record').item.json.fields.From }}",
+            "Company": "={{ $('When Executed by Another Workflow').item.json.CompanyName }}",
+            "Approved Time": "={{ $json.fields['Confirmed Time'] }}",
+            "MessageID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "client_timezone": "={{ $('When Executed by Another Workflow').item.json.client_timezone }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Approved Time",
+              "displayName": "Approved Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Chunks",
+              "displayName": "Chunks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "client_timezone",
+              "displayName": "client_timezone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        -336
+      ],
+      "id": "acc9833d-1471-4ba2-930a-a02925b04992",
+      "name": "Execute Booking Agent"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "app6arNuFYYMX4N2T",
+          "mode": "list",
+          "cachedResultName": "AI SDR",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbla9rduxrTZlCN9g",
+          "mode": "list",
+          "cachedResultName": "Booking Information",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T/tbla9rduxrTZlCN9g"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Confirmed Time": "={{ $('Send message and wait for response').item.json.data.text }}",
+            "From": "={{ $('When Executed by Another Workflow').item.json.From }}",
+            "Client's Suggested Time": "={{ $('Code in JavaScript').item.json.client_time }}",
+            "Company's Name": "={{ $('When Executed by Another Workflow').item.json.CompanyName }}",
+            "MessageID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "id": "={{ $('Airtable (Positive)').item.json.id }}",
+            "Local Time": "={{ $('Code in JavaScript').item.json.pakistan_time }}",
+            "Time Zone": "={{ $('Code in JavaScript').item.json.client_timezone }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company's Name",
+              "displayName": "Company's Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client's Suggested Time",
+              "displayName": "Client's Suggested Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Time Zone",
+              "displayName": "Time Zone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Local Time",
+              "displayName": "Local Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Confirmed Time",
+              "displayName": "Confirmed Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1280,
+        -336
+      ],
+      "id": "91c8c59b-e52e-4d62-8d2d-bb661efcacd4",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "897n6kNU7VPas56t",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyD1PqMvwyAqExmu2-IDoLkZ6rZdYiM7YRs",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Below are the following items:\\nTo: {{ $('When Executed by Another Workflow').item.json.To }}\\nEmail drafted by the AI Agent Previously: {{ $('When Executed by Another Workflow').item.json.Draft }}\\nChunks: {{ $('When Executed by Another Workflow').item.json.Chunks }}\\nFeedback Received by the user: {{ $json.data.Feedback }}\\n-Now regenerate this email based on the feedback received from the user. The rest of the content should remain unchanged — only update the parts mentioned in the feedback.\\n- Write the email as a **final version**, ready to send (NO PLACEHOLDERS LIKE [INSERT LINK] OR COMMENT LIKE “IF AVAILIBLE”).\\n-Subject shouldn't be included\\n\\n*Rewrite the entire email as a complete, natural, and professional final version. Keep the original context and tone from the previous draft but improve only where feedback suggests. Do not include or mention the feedback itself, and ensure the output is a polished, human-written email ready to send.*\\n\\n---\\n\\n**Example Emails for Context (for better understanding of style):**\\n\\n1. \\\"I want to develop an E-commerce website with 10 navigation tabs. What would be the cost and estimated time of completion?\\\"\\n\\n2. \\\"Could you please share your pricing details and project timelines for a mobile app that supports both iOS and Android?\\\"\\n\\n3. \\\"I’m looking to redesign my company’s landing page. Can you help me understand your process and average turnaround time?\\\"\\n\\n4. \\\"Do you also offer SEO and digital marketing services along with web development? If yes, please share a package overview.\\\"\\n\\n5. \\\"We need an AI chatbot integrated into our existing CRM system. Can you estimate the development time and cost?\\\"\\n\\n6. \\\"I want to automate my email workflows using n8n or similar tools. What’s your experience with that and how soon can we start?\\\"\\n\\n7. \\\"I’m interested in creating a portfolio website with a custom admin dashboard. Could you share a rough quote and timeline?\\\"\\n\\n8. \\\"We want a booking system with payment integration. Can you tell me how long it would take to build and your pricing model?\\\"\\n\\n9. \\\"Do you provide support for maintaining and updating websites after launch? If yes, what are your service charges?\\\"\\n\\n10. \\\"I’d like to integrate an AI agent into my website for client interaction. Can you explain the development process and pricing?\\\"\\n\\n---\\n\\n*Use these examples only for understanding tone, structure, and intent — do not copy them or include them in the final output email.*\"\n        }\n      ]\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "0c995462-3c52-478b-a466-336fd781c277",
+      "name": "Info Request Intent"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "aisdr",
+          "mode": "list",
+          "cachedResultName": "aisdr"
+        },
+        "prompt": "={{ $json.candidates[0].content.parts[0].text }}",
+        "topK": 6,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "6c721d52-a1d3-4abf-b435-201918096379",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "O81etsD5UPh1icu2",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        144
+      ],
+      "id": "c06bbfc6-f76d-45e3-8889-5d7c7772ac89",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g3RIMm29hvfDVdvv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a professional AI assistant that writes natural, human-sounding email replies for **The Hexaa**.  \\nYour goal is to respond to potential clients with clarity, professionalism, and warmth — explaining The Hexaa’s services in a way that feels genuinely written by a human team member.\\n\\nBelow are:\\n1. Chunks of The Hexaa’s website (content)  \\n2. A user’s query or request for details about services or collaboration  \\n3. The client’s information  \\n4. Feedback (if present — use it to refine tone, length, or focus)\\n\\nYour task:\\n- Write a **complete, ready-to-send professional email** addressed to the client.  \\n- Use only the information found in the provided **chunks** to form your response.  \\n- Review all chunks carefully and choose the ones most relevant to the user’s question.  \\n- If a link (such as a website, case study, or portfolio) is available, integrate it naturally into the email.  \\n- If the client asks about something not included in the chunks, acknowledge it politely without referencing or implying missing data.  \\n- The email must sound **genuinely human**, **confident**, and **tailored** — not robotic, repetitive, or overly short.  \\n- Add meaningful context from The Hexaa’s services to make the email feel helpful, substantial, and conversational.\\n\\nTone and Style:\\n- Maintain a **friendly, professional, and approachable tone**, like a well-trained SDR or business development representative.  \\n- Avoid generic replies, bullet lists, or AI-style phrasing.  \\n- Make the message slightly detailed — around 2–3 concise paragraphs that naturally explain what The Hexaa offers and how it connects to the client’s inquiry.  \\n- Always ensure the response directly addresses the client's question (e.g., project cost, timeline, process, or service details).  \\n- If the query includes development needs like “E-commerce website,” “AI chatbot,” or “workflow automation,” write a reply that sounds like a professional Hexaa team member would naturally respond — clear, warm, and client-focused.\\n\\nFormatting Rules:\\n- The email must always begin with:  \\n  **Hi {{ $('When Executed by Another Workflow').item.json.CompanyName || 'there' }},**\\n- Do **not** include a subject line.  \\n- Do **not** use placeholders (like [Insert Link]) or comments (like “if available”).  \\n- Do **not** use “Dear” or overly formal greetings.  \\n- End the email smoothly and courteously — for example:  \\n  “Looking forward to hearing from you,” or “Best regards, The Hexaa Team.”  \\n- Keep spacing and paragraph flow natural for readability.\\n\\n---\\n\\n**Chunks:**\\n{{ $json.document.pageContent }}\\n\\n**User Query:**\\n{{ $('Info Request Intent').item.json.candidates[0].content.parts[0].text }}\\n\\n**Client’s Info:**\\nFrom: {{ $('When Executed by Another Workflow').item.json.From }}\\nCompany: {{ $('When Executed by Another Workflow').item.json.CompanyName }}\\nFeedback: {{ $json.data.Feedback }}\\n\\n---\\n\\n*When writing the final reply:*\\n- Analyze the client’s query carefully to identify their intent (e.g., pricing request, timeline inquiry, collaboration interest).  \\n- Provide a clear, relevant, and professional response that explains how The Hexaa can help.  \\n- For example, if the user asks about building an E-commerce website, reply with a message like:\\n  “Thank you for reaching out! At The Hexaa, we specialize in building tailored E-commerce platforms designed for performance and scalability. Once we understand your requirements — like features, design preferences, and integrations — we’ll share a detailed proposal with cost and timeline estimates.”  \\n- Apply similar logic for other service-related inquiries, ensuring every reply feels custom, polished, and human.  \\n- Do not include the feedback text or irrelevant content in the reply.\\n\\nWrite the final email reply in a natural, human, and professional tone — slightly detailed, confident, and directly relevant to the query — as if personally written by a representative from **The Hexaa**.\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        0
+      ],
+      "id": "f643d57b-d722-492e-920f-bdbb7eaf8963",
+      "name": "AI Agent",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        160
+      ],
+      "id": "60b8c288-daa0-4023-9a02-761e644ab1da",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g3RIMm29hvfDVdvv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "79jaepRHa7th1LpY",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/79jaepRHa7th1LpY",
+          "cachedResultName": "reply_agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Draft": "={{ $json.output }}",
+            "Message_ID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "Chunks": "={{ $('Pinecone Vector Store').item.json.document.pageContent }}",
+            "To": "={{ $('When Executed by Another Workflow').item.json.From }}",
+            "Company's Name": "={{ $('When Executed by Another Workflow').item.json.CompanyName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Company's Name",
+              "displayName": "Company's Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Draft",
+              "displayName": "Draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Message_ID",
+              "displayName": "Message_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Chunks",
+              "displayName": "Chunks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1856,
+        0
+      ],
+      "id": "d0af34c4-4f3a-4609-817a-f3bbee5cf94c",
+      "name": "Execute Reply Agent"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.zoom",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        448
+      ],
+      "id": "91645a1a-ce50-44f8-b69e-a807e6f6bb24",
+      "name": "Create a meeting"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app6arNuFYYMX4N2T",
+          "mode": "list",
+          "cachedResultName": "AI SDR",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbla9rduxrTZlCN9g",
+          "mode": "list",
+          "cachedResultName": "Booking Information",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T/tbla9rduxrTZlCN9g"
+        },
+        "filterByFormula": "={From} = \"{{$('Airtable (Positive)').item.json.fields.From}}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        448
+      ],
+      "id": "668eebf9-bf8b-4b49-9d27-d1e4f6f3c00f",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "897n6kNU7VPas56t",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "abdul.dev010@gmail.com",
+          "mode": "list",
+          "cachedResultName": "abdul.dev010@gmail.com"
+        },
+        "start": "={{ new Date($json[\"Confirmed Time\"]).toISOString() }}",
+        "end": "={{ new Date(new Date($json[\"Confirmed Time\"]).getTime() + 30 * 60 * 1000).toISOString() }}",
+        "useDefaultReminders": false,
+        "additionalFields": {
+          "summary": "=Meeting with {{ $json['Company\\'s Name'] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1312,
+        448
+      ],
+      "id": "978befdb-db52-4efc-bb97-7cc5a5d41956",
+      "name": "Create an event",
+      "executeOnce": false,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xWw9fSDWOmzMcbCR",
+          "name": "Google Calendar account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "app6arNuFYYMX4N2T",
+          "mode": "list",
+          "cachedResultName": "AI SDR",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblMJuvVJmnTo42NI",
+          "mode": "list",
+          "cachedResultName": "Positive Replies",
+          "cachedResultUrl": "https://airtable.com/app6arNuFYYMX4N2T/tblMJuvVJmnTo42NI"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Stage": "={{ $json.intent }}",
+            "From": "={{ $('When Executed by Another Workflow').item.json.From }}",
+            "MessageID": "={{ $('When Executed by Another Workflow').item.json.MessageID }}",
+            "Company's Name": "={{ $('When Executed by Another Workflow').item.json.CompanyName }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company's Name",
+              "displayName": "Company's Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Social URLs",
+              "displayName": "Social URLs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        256,
+        0
+      ],
+      "id": "a47d33de-9595-42f9-9e76-fd6af7442669",
+      "name": "Airtable (Positive)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "897n6kNU7VPas56t",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Slack (Send & Wait for Response)\n“Notifies the team in Slack for manual meeting time confirmation when client-proposed time is detected.”",
+        "height": 352,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -512
+      ],
+      "id": "fe7228c3-f261-4a22-b3eb-dbdfe318117e",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Execute Booking Agent\n“Triggers the Booking Agent workflow to handle calendar scheduling and meeting setup once time is approved.”",
+        "height": 352,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        -512
+      ],
+      "id": "84b2eafb-5a0e-40aa-8f4f-8278d1dcd247",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Switch Nodes\n“Route logic — determines the next step based on the stage (e.g., Meeting Request → booking agent, Info Request → AI reply agent).”",
+        "height": 320,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -160
+      ],
+      "id": "25ecae36-38ff-44ba-a238-dffe089afe90",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Airtable Booking Info\n“Logs all finalized meetings — including client name, suggested time, confirmed time, and timezone — for reference.”",
+        "height": 304,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        288
+      ],
+      "id": "7d881e80-2dae-48e4-afd0-33c9ba0e0ff8",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## Airtable (Positive)\n“Saves all classified emails with stage, sender, and company name into respective Airtable tables for easy tracking.”",
+        "height": 320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "faf7d1e0-5315-4028-8e72-5b51dc19a972",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## GetStage / GetStage1\n“Cleans Gemini’s response and extracts the structured JSON fields — like intent stage, time, and timezone.”",
+        "height": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -160
+      ],
+      "id": "f4c72f4b-c6e3-41db-aa2c-9b20861fb3d0",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Pinecone Vector Store + Embeddings\n“Fetches relevant company knowledge from The Hexaa’s website embeddings for accurate, contextual email replies.”",
+        "height": 416,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        -144
+      ],
+      "id": "9a775456-0de2-41ef-ad86-2894882361a9",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Execute Reply Agent\n“Triggers the AI Reply Agent workflow, which drafts professional replies based on the company website and client’s query.”",
+        "height": 336,
+        "width": 256,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        -192
+      ],
+      "id": "30eec4fd-ff1f-42aa-8c72-f660f1ca172d",
+      "name": "Sticky Note12"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Airtable (Positive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add label to message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add label to message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record": {
+      "main": [
+        [
+          {
+            "node": "Execute Booking Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info Request Intent": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Execute Reply Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message1": {
+      "main": [
+        [
+          {
+            "node": "Info Request Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message2": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable (Positive)": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c117baf3-dde9-4e31-85b0-bd2052d1f76b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "GOY5maBu4ydUatXF",
+  "tags": []
+}

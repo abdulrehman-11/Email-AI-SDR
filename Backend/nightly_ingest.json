@@ -1,0 +1,583 @@
+{
+  "name": "nightly_ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        944,
+        0
+      ],
+      "id": "d1158547-7350-4f27-99c8-a0eca519f7e9",
+      "name": "Batch URL1",
+      "retryOnFail": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "link",
+              "cssSelector": "a",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        512,
+        0
+      ],
+      "id": "691804f6-f4c0-4cb2-951e-d48c615f5c17",
+      "name": "all urls1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const baseUrl = 'https://thehexaa.ai';\nconst hrefs = $input.first().json.link || [];\nconst unique = new Set();\n\n// List of domains to exclude\nconst excludeDomains = ['facebook.com', 'instagram.com', 'linkedin.com'];\n\nhrefs.forEach(link => {\n  if (!link) return;\n\n  const fullLink = link.startsWith('http')\n    ? link\n    : baseUrl + link;\n\n  const isSocial = excludeDomains.some(domain => fullLink.includes(domain));\n  if (!isSocial) {\n    unique.add(fullLink);\n  }\n});\n\nreturn Array.from(unique).map(url => ({\n  json: { url }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        0
+      ],
+      "id": "e497f4e4-0423-4dc0-bca6-23c4e26c00c4",
+      "name": "Normalize URLs1"
+    },
+    {
+      "parameters": {
+        "url": "https://thehexaa.ai/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "ce44c711-7fea-4dcf-8195-b9a521b5de29",
+      "name": "Hexaa site1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        208
+      ],
+      "id": "97fb8b52-d812-4a19-97a9-7cab7f633506",
+      "name": "each url content1",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "h1_tags",
+              "cssSelector": "h1",
+              "returnArray": true
+            },
+            {
+              "key": "h2_tags",
+              "cssSelector": "h2",
+              "returnArray": true
+            },
+            {
+              "key": "h3_tags",
+              "cssSelector": "h3",
+              "returnArray": true
+            },
+            {
+              "key": "h4_tags",
+              "cssSelector": "h4",
+              "returnArray": true
+            },
+            {
+              "key": "h5_tags",
+              "cssSelector": "h5",
+              "returnArray": true
+            },
+            {
+              "key": "h6_tags",
+              "cssSelector": "h6",
+              "returnArray": true
+            },
+            {
+              "key": "paragraphs",
+              "cssSelector": "p",
+              "returnArray": true
+            },
+            {
+              "key": "anchor_texts",
+              "cssSelector": "a",
+              "returnArray": true
+            },
+            {
+              "key": "anchor_links",
+              "cssSelector": "a",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            },
+            {
+              "key": "list_items",
+              "cssSelector": "li",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        208
+      ],
+      "id": "9b0dc411-bbfc-4d6b-9c28-fba489f1b7e9",
+      "name": "HTML1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "766b97e9-f21e-4a09-97a6-64fa0ccd1a9a",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        208
+      ],
+      "id": "2ee8837c-af93-442d-9170-0046335b0d83",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function cleanArray(arr) {\n  return (arr || []).filter(item => item && String(item).trim());\n}\n\nconst output = $input.all().map((doc) => {\n  const json = doc.json || {};\n\n  const h1 = cleanArray(json.h1_tags || json.h1);\n  const h2 = cleanArray(json.h2_tags || json.h2);\n  const h3 = cleanArray(json.h3_tags || json.h3);\n  const h4 = cleanArray(json.h4_tags || json.h4);\n  const h5 = cleanArray(json.h5_tags || json.h5);\n  const h6 = cleanArray(json.h6_tags || json.h6);\n  const paragraphs = cleanArray(json.paragraphs);\n\n  const url =\n    $('Edit Fields1').first().json.url ||\n    '';\n\n  let content = '';\n  h1.forEach(text => content += `# ${text}\\n\\n`);\n  h2.forEach(text => content += `## ${text}\\n\\n`);\n  h3.forEach(text => content += `### ${text}\\n\\n`);\n  h4.forEach(text => content += `#### ${text}\\n\\n`);\n  h5.forEach(text => content += `##### ${text}\\n\\n`);\n  h6.forEach(text => content += `###### ${text}\\n\\n`);\n  paragraphs.forEach(text => content += `${text}\\n\\n`);\n\n  return {\n    json: {\n      original_url: $input.first().json.url,\n      contents: content.trim(),\n      metadata: {\n        source_url: url,\n        paragraph_count: paragraphs.length\n      },\n      char_count: content.length\n    }\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        208
+      ],
+      "id": "255624c0-977b-49c0-924d-be6e7abacfc3",
+      "name": "Cleaning content1"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "aisdr1",
+          "mode": "list",
+          "cachedResultName": "aisdr1"
+        },
+        "embeddingBatchSize": "={{ 768 }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.2,
+      "position": [
+        1984,
+        208
+      ],
+      "id": "19714423-d708-440b-b2ee-d402c611a24a",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "O81etsD5UPh1icu2",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        448
+      ],
+      "id": "bfb65b1d-5173-4394-b108-eea5abf54031",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g3RIMm29hvfDVdvv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        592
+      ],
+      "id": "bec1f2f3-a07b-44a7-89db-6c22f3f7f862",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        720
+      ],
+      "id": "a59f0ef2-36e8-4ee2-a3df-3de3960a16ee",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "content": "## Nightly Trigger\nRuns automatically at 2 AM every day.\nStarts the full ingestion pipeline to refresh website data and embeddings.",
+        "height": 336,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "cc24fdbe-ae68-4c1f-b490-59c5d82e6da8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 6 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "81b07d76-57bb-4f86-bd40-efb3caa13a9d",
+      "name": "Schedule 2am"
+    },
+    {
+      "parameters": {
+        "content": "## Hexaa Site Request\netches the homepage HTML from https://thehexaa.ai.\nThis acts as the entry point to collect all internal URLs.",
+        "height": 336,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        192,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "bbf912c1-d30f-4fe9-aa50-28f733324ce3",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Extract and Normalize URLs\nExtracts all <a> tags from the homepage, filters out social media domains,and normalizes relative links into full URLs for further crawling.",
+        "height": 336,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        448,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "937b2613-5a10-4946-933f-f06130e947db",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Process URLs in Batches\nSplits the list of URLs into manageable batches to avoid rate limits.\nEnsures each page is fetched efficiently and reliably.",
+        "height": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        864,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "63b42729-5f1f-40b2-9ebb-8de977bbeb1b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Each URL Content\nFetches the full HTML content of every normalized URL in sequence.\nPrepares data for text extraction and cleaning.",
+        "height": 336,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1216,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "6721af44-53ef-409c-ab27-a807238b790e",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Extract Page Text\nParses HTML to collect all headers (h1–h6), paragraphs, and list items.\nCreates structured raw data for downstream processing.",
+        "height": 336,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1440,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "99ef506e-3f18-4faf-af93-b57feebee1d2",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Clean and Format Content\nCombines headings and paragraphs into clean markdown-like text.\nRemoves empty elements and counts total characters and paragraphs.",
+        "height": 336,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1680,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "09488c59-c716-4aea-a274-bf72407b4abc",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Store in Pinecone Vector DB\nUses Google Gemini to create embeddings for each document.\nSaves embeddings into Pinecone for semantic search and retrieval.",
+        "height": 336,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1968,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "7be61536-0b20-4473-b4af-4350ec1df4c3",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Text Splitter + Data Loader\nSplits large documents into smaller overlapping chunks (≈500 chars each).\nFeeds them into the embedding and storage pipeline for better retrieval.",
+        "height": 448,
+        "width": 288,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2112,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "00a36be5-fc9d-43b2-a928-7a9fc921e5da",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Batch URL1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "all urls1": {
+      "main": [
+        [
+          {
+            "node": "Normalize URLs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize URLs1": {
+      "main": [
+        [
+          {
+            "node": "Batch URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hexaa site1": {
+      "main": [
+        [
+          {
+            "node": "all urls1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "each url content1": {
+      "main": [
+        [
+          {
+            "node": "HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML1": {
+      "main": [
+        [
+          {
+            "node": "Cleaning content1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "each url content1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaning content1": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Batch URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule 2am": {
+      "main": [
+        [
+          {
+            "node": "Hexaa site1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f5ab30db-6e84-4c3c-b86c-7385118d83cb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "pCxMweXzJ5Q3suZO",
+  "tags": []
+}

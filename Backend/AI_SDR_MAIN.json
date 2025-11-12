@@ -1,0 +1,621 @@
+{
+  "name": "AI_SDR_MAIN",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b346d2a8-c152-4445-b9d8-f8829913fc7f",
+              "name": "From",
+              "value": "={{ $('Gmail Trigger').item.json.from.value[0].name }} <{{ $('Gmail Trigger').item.json.from.value[0].address }}>",
+              "type": "string"
+            },
+            {
+              "id": "288e4f62-12b8-4842-a3ce-b8bd801cd235",
+              "name": "subject",
+              "value": "={{ $('Gmail Trigger').item.json.headers.subject}}",
+              "type": "string"
+            },
+            {
+              "id": "e368346c-305b-4c8f-97a1-37db03f40563",
+              "name": "textPlain",
+              "value": "={{ $('Gmail Trigger').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "9253f8b7-b7b6-4b94-a024-e58bde9fd0c9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyD1PqMvwyAqExmu2-IDoLkZ6rZdYiM7YRs\n",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\",\n  \"Accept\": \"application/json\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"From: {{$json.from}}\\nSubject: {{$json.subject}}\\nBody: {{$json.safeText}}\\n\\nCurrent date and time (Pakistan Time): {{ new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi' }) }}\\n\\nTask:\\n1. Categorize this email into one of the following **main categories**:\\n   - Positive\\n   - Negative\\n\\n2. Then, assign the correct **stage** based on intent:\\n   - Positive → Meeting Request | Info Request | Slot Confirmation\\n   - Negative → FFU | DNC | Lost\\n\\n3. Extract sender’s **company name** from signature (last lines, e.g., after “Best regards,” or “Regards,” etc.).\\n\\n4. Extract any **meeting time or date** from the email and normalize it into:\\n{\\n  \\\"client_time\\\": \\\"YYYY-MM-DDTHH:mm:ss\\\",\\n  \\\"pakistan_time\\\": \\\"YYYY-MM-DDTHH:mm:ss\\\",\\n  \\\"client_timezone\\\": \\\"string or null\\\"\\n}\\n\\n### Timezone Rules\\n(unchanged...)\\n\\n### Examples:\\n\\n#### Positive → Meeting Request\\n- \\\"Let’s schedule a quick demo tomorrow at 4 PM PST.\\\"\\n- \\\"Can we have a meeting on Thursday 3 PM EST to discuss integration?\\\"\\n- \\\"We’d like to arrange a 30-minute call next Monday 10 AM GMT.\\\"\\n- \\\"Book a slot for our discussion this Friday at 11 AM (GMT+2).\\\"\\n- \\\"Please confirm availability for a product walkthrough at 5 PM Pakistan Time.\\\"\\n\\n#### Positive → Info Request\\n- \\\"I want to develop an E-commerce website with 10 navigation tabs. What would be the cost and estimated time of completion?\\\"\\n- \\\"Could you please share pricing details for your AI automation service?\\\"\\n- \\\"We’re interested in understanding how The Hexaa handles workflow automation.\\\"\\n- \\\"Do you also offer custom chatbot development?\\\"\\n- \\\"Can you send us case studies or project timelines for reference?\\\"\\n\\n#### Positive → Slot Confirmation\\n- \\\"Our team confirms the meeting slot for Wednesday, 4 PM PST.\\\"\\n- \\\"Yes, 2 PM your time works perfectly for us.\\\"\\n- \\\"Confirmed for the scheduled slot at 10 AM EST tomorrow.\\\"\\n- \\\"We’ll join the demo at 5 PM Pakistan Time as planned.\\\"\\n- \\\"That time works — see you at 6 PM IST.\\\"\\n\\n#### Negative → FFU (Follow-up Needed)\\n- \\\"Sorry for the delay — we’re still reviewing internally.\\\"\\n- \\\"Let’s reconnect next month after our internal approvals.\\\"\\n- \\\"We’re interested but not ready to proceed yet.\\\"\\n- \\\"Please follow up after our budget cycle next quarter.\\\"\\n- \\\"Still evaluating — will reach out soon.\\\"\\n\\n#### Negative → DNC (Do Not Contact)\\n- \\\"Please remove me from your mailing list.\\\"\\n- \\\"We’re not interested in these services.\\\"\\n- \\\"Stop sending promotional content, please.\\\"\\n- \\\"We’ve partnered with another vendor, no further contact needed.\\\"\\n- \\\"Kindly don’t reach out again.\\\"\\n\\n#### Negative → Lost (Irrelevant / Non-Business / Spam)\\n🧠 **Definition:** Emails that do *not* relate to services, projects, or business intent — e.g. asking about timing, office hours, or unrelated topics.\\n\\n- \\\"Hi Hexaa, I want to inquire about lunch timings. Regards, 5 Rivers\\\"\\n- \\\"Hi Hexaa, What are your office hours today? Regards, NextGen\\\"\\n- \\\"Hello Hexaa, I want to inquire about lunch timings. Thanks, Bluebyte\\\"\\n- \\\"Hi Team Hexaa, Are you open on weekends? Regards, OrionSoft\\\"\\n- \\\"Hello, Just checking what time you guys have lunch? - FusionWorks\\\"\\n- \\\"Dear Hexaa, Please confirm your lunch timings. Regards, CloudCore\\\"\\n- \\\"Hi there, Wanted to know your working hours. Regards, Apex Digital\\\"\\n- \\\"Hello, Can you tell me your office timing schedule? Regards, Innotech\\\"\\n- \\\"Hi Hexaa, Are you available after 3 PM or during lunch hours? Regards, DevHub\\\"\\n- \\\"Hey Team, Could you share your break time or working hours? Regards, ByteLine\\\"\\n- \\\"Greetings Hexaa, Please let us know your lunch break timings for coordination. Regards, MetaGrow\\\"\\n\\n🧩 **Note:** Emails asking about *lunch breaks, office hours, holidays, or general availability* should always be categorized as:\\n```json\\n{\\n  \\\"category\\\": \\\"Negative\\\",\\n  \\\"stage\\\": \\\"Lost\\\"\\n}\\n```\\nThey are non-business or internal inquiries, not sales-related leads.\\n\\n#### Negative → Lost (Spam / Promotional)\\n- \\\"Unlock Smarter Shopping with Our New AI Assistant — Try Now!\\\"\\n- \\\"Join the Future of AI Shopping Today 🚀\\\"\\n- \\\"You're Invited: Live Demo of Our New AI Assistant at 4 PM (PKT).\\\"\\n- \\\"Smarter, Faster, Better – The AI Shopping Assistant 2.0 is Here!\\\"\\n- \\\"Big News for Freelancers: Join Hexaa’s Freelancer Growth Hub 🌍\\\"\\n- \\\"Hey Abdul, Wow. The response to our exclusive WhatsApp Community for Pakistani Freelancers was overwhelming. Introducing the Official Instagram Channel for Pakistani Freelancers by Truelancer! Remote & Part-Time Jobs, Quick Freelance Gigs, Long-Term Contracts, Early Access to Projects, Real-Time Alerts, Exclusive Updates. Join Now & Never Miss a Project Again.\\\"\\n- \\\"Get your free ebook on AI tools for freelancers — limited time!\\\"\\n- \\\"Congratulations! You’ve been selected for a special webinar on productivity hacks.\\\"\\n- \\\"Earn $500/week from home — sign up today!\\\"\\n- \\\"Exclusive invite to our affiliate program — start earning immediately!\\\"\\n\\n| Example phrase in email | Extracted client_timezone | client_time | pakistan_time |\\n|--------------------------|----------------------------|--------------|----------------|\\n| “Meeting at 3:00 PM (GMT+5)” | GMT+5 | 2025-10-29T15:00:00 | 2025-10-29T15:00:00 |\\n| “Call at 2 PM EST” | EST | 2025-10-29T14:00:00 | 2025-10-30T00:00:00 |\\n| “Demo on Wednesday at 10 AM PST” | PST | 2025-10-29T10:00:00 | 2025-10-29T23:00:00 |\\n| “Schedule for 5 PM Pakistan Time” | Pakistan Time | 2025-10-29T17:00:00 | 2025-10-29T17:00:00 |\\n\\nFinal output must be valid JSON:\\n```json\\n{\\n  \\\"category\\\": \\\"Negative\\\",\\n  \\\"stage\\\": \\\"Lost\\\",\\n  \\\"companyName\\\": \\\"5 Rivers\\\",\\n  \\\"client_timezone\\\": null,\\n  \\\"client_time\\\": null,\\n  \\\"pakistan_time\\\": null\\n}\\n```\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        0
+      ],
+      "id": "8b8a7c46-3492-4a55-8843-a204c466520e",
+      "name": "HTTP Request",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "Positive",
+                    "rightValue": "={{ $json.category }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c157b5f3-9131-4e8d-b2a4-434a84408705"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": ""
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7afe7e13-eb99-458c-a968-fd4f86e7f19e",
+                    "leftValue": "Negative",
+                    "rightValue": "={{ $json.category }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "af60183c-a96c-4278-bdcc-8875cd5a68be",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.responseText || $json.text || $json.candidates?.[0]?.content?.parts?.[0]?.text || '';\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\nfunction extractCompanyNameFromText(text) {\n  if (!text) return null;\n  const lower = text.toLowerCase();\n\n  // 1️⃣ Capture likely signature section (below closing phrases)\n  const signatureMatch = lower.match(/(best regards|regards|thanks|thank you|sincerely|cheers|kind regards|warm regards)[^]*$/i);\n  if (!signatureMatch) return null;\n\n  const signature = signatureMatch[0]\n    .replace(/(\\r\\n|\\n|\\r)/g, ' ')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n\n  // 2️⃣ Broader patterns to catch company names in signature\n  const patterns = [\n    /from\\s+([A-Z][A-Za-z0-9&\\-\\s]+)/i,\n    /team\\s+([A-Z][A-Za-z0-9&\\-\\s]+)/i,\n    /at\\s+([A-Z][A-Za-z0-9&\\-\\s]+)/i,\n    /@([A-Z][A-Za-z0-9&\\-\\s]+)/i,\n    /[-,|]\\s*([A-Z][A-Za-z0-9&\\-\\s]+(?:\\s+(?:Technologies|Solutions|Digital|Inc|Ltd|Corp|Co))?)/i,\n    /\\b([A-Z][A-Za-z0-9&\\-\\s]+(?:\\s+(?:Technologies|Solutions|Digital|Inc|Ltd|Corp|Co)))/i\n  ];\n\n  for (const pattern of patterns) {\n    const m = signature.match(pattern);\n    if (m && m[1]) {\n      let name = m[1].trim();\n      // 🚫 Ignore polite or non-company words\n      if (\n        /(gmail|yahoo|outlook|hotmail|your company|ours|reply|inbox|please|thank|kind|regards|hi|hello|cheers|team)/i.test(name)\n      ) continue;\n\n      // 🧹 Cleanup extra words like \"please confirm\" etc.\n      name = name\n        .replace(/\\b(please|thank|kind|regards|cheers|reply|team)\\b/gi, '')\n        .replace(/\\s{2,}/g, ' ')\n        .trim();\n\n      if (name && name.length > 1) {\n        return name;\n      }\n    }\n  }\n\n  return null;\n}\n\ntry {\n  const parsed = JSON.parse(cleaned);\n\n  const sourceText =\n    $('Code').first().json.textPlain ||\n    $('Edit Fields').first().json.textPlain ||\n    '';\n\n  const companyName =\n    parsed.companyName ||\n    $('Code').first().json.companyName ||\n    extractCompanyNameFromText(sourceText) ||\n    \"Unknown\";\n\n  // ✅ Time info (using updated field names)\n  const client_time = parsed.client_time || null;\n  const client_timezone = parsed.client_timezone || null;\n  const pakistan_time = parsed.pakistan_time || null;\n\n  return [{\n    json: {\n      category: parsed.category || \"Unknown\",\n      stage: parsed.stage || \"Other\",\n      companyName,\n      socialUrls: parsed.socialUrls || [],\n      client_time,\n      client_timezone,\n      pakistan_time\n    }\n  }];\n} catch (e) {\n  const sourceText =\n    $('Code').first().json.textPlain ||\n    $('Edit Fields').first().json.textPlain ||\n    '';\n\n  const companyName =\n    extractCompanyNameFromText(sourceText) ||\n    $('Code').first().json.companyName ||\n    \"Unknown\";\n\n  return [{\n    json: {\n      category: \"Unknown\",\n      stage: \"Other\",\n      companyName,\n      socialUrls: [],\n      client_time: null,\n      client_timezone: null,\n      pakistan_time: null\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "1fb47f79-2550-4f77-b5bb-7fe526189186",
+      "name": "Get Company Info"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "691aa0ed-84f4-4d96-92bc-cdeddf36d55f",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GOY5maBu4ydUatXF",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GOY5maBu4ydUatXF",
+          "cachedResultName": "Positive SDR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "={{ $json.stage }}",
+            "CompanyName": "={{ $json.companyName }}",
+            "client_timezone": "={{ $json.client_timezone }}",
+            "pakistan_time": "={{ $json.pakistan_time }}",
+            "client_time": "={{ $json.client_time }}",
+            "MessageID": "={{ $('Gmail Trigger').item.json.id }}",
+            "SafeText": "={{ $('Edit Fields').item.json.textPlain }}",
+            "To": "={{ $('Edit Fields').item.json.From }}",
+            "From": "={{ $('Edit Fields').item.json.From }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "CompanyName",
+              "displayName": "CompanyName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "SafeText",
+              "displayName": "SafeText",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "client_time",
+              "displayName": "client_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "client_timezone",
+              "displayName": "client_timezone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "pakistan_time",
+              "displayName": "pakistan_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        -208
+      ],
+      "id": "dec9d79f-eef3-4fa2-93f5-3ca9f451f0fa",
+      "name": "Call 'Positive SDR'",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Trigger\nThe node automatically checks your Gmail inbox for unread messages and captures key details like the sender, subject, and message snippet. It serves as the starting point for the entire workflow.",
+        "height": 320,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -192
+      ],
+      "id": "4a7fbfa4-b9c5-424c-b208-e45f9547d0cd",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Edit Fields\nThe node cleans and standardizes the email data. It extracts important fields such as the sender, subject, and body text, ensuring consistent formatting for later steps.",
+        "height": 320,
+        "width": 224,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -192
+      ],
+      "id": "06631fcb-75b4-4ba0-a87d-70f079023a4c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## HTTP Request\nThe node sends the processed email content to the Gemini 2.0 Flash API. The API analyzes tone and intent to classify the message as Positive or Negative and identify its correct stage.",
+        "height": 320,
+        "width": 224,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -192
+      ],
+      "id": "23660dfb-844f-4c26-971e-bf1985ac1446",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Code \nThe node prepares the email content for AI analysis. It converts the text into a clean format, extracts the company name from the signature, and stores the Gmail message ID for tracking.",
+        "height": 320,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -192
+      ],
+      "id": "8242ced4-869d-40da-9051-84c17f519930",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      safeText: JSON.stringify($json.textPlain || \"\").slice(1, -1),\n      from: $input.first().json.From,\n      subject: $input.first().json.subject,\n      gmailMessageId: $('Gmail Trigger').first().json.id,\n\n      // --- Extract company name from email signature ---\n      companyName: (() => {\n        const text = $json.textPlain || \"\";\n        const lower = text.toLowerCase();\n\n        // 1️⃣ Find the section after common signature keywords\n        const signatureMatch = lower.match(/(best regards|regards|thanks|thank you|sincerely|cheers)[^]*$/i);\n        if (!signatureMatch) return \"Unknown\";\n\n        const signature = signatureMatch[0]\n          .replace(/(\\r\\n|\\n|\\r)/g, \" \")\n          .replace(/\\s{2,}/g, \" \")\n          .trim();\n\n        // 2️⃣ Try to extract company name after name or \"from\"\n        const companyMatch =\n          signature.match(/from\\s+([A-Z][A-Za-z0-9&\\-\\s]+)/i) || // e.g. \"from Hexaa\"\n          signature.match(/[,|\\-]\\s*([A-Z][A-Za-z0-9&\\-\\s]+)/i) || // e.g. \"Khurram Mughal - Hexaa\"\n          signature.match(/\\b([A-Z][A-Za-z0-9&\\-\\s]+)\\b\\s*(team|inc|ltd|co|corp|technologies)/i); // e.g. \"Hexaa Technologies\"\n\n        if (companyMatch && companyMatch[1]) {\n          return companyMatch[1].trim();\n        }\n\n        return \"Unknown\";\n      })()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "bb4138b6-55cc-4349-989c-7ecca0e99b13",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "## Get Company \nThe Info node processes and organizes the AI’s JSON response. It extracts key details like category, stage, company name, and any social URLs while ensuring error-free data output.",
+        "height": 320,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -192
+      ],
+      "id": "f2f55a24-4b1f-4959-b677-53897fb9ab6c",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Switch node \nThe separates emails based on their classification result. Positive messages are routed to the Positive SDR branch, while Negative ones are sent to a different path for separate handling.",
+        "height": 320,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        -192
+      ],
+      "id": "9c1bba9e-889d-4398-a4f4-0cefeb922fbb",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Call 'My workflow'1\nThe (Negative SDR) node handles less promising or uninterested leads. It passes data for logging or tracking so future contact attempts remain relevant and respectful.",
+        "height": 368,
+        "width": 224,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -32
+      ],
+      "id": "6f40ff37-74b3-4207-aef5-1b282d34351c",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Call 'Positive SDR'\nThe node activates the follow-up process for interested leads. It sends data such as company, stage, and sender details to the Positive SDR workflow for engagement or scheduling actions.",
+        "height": 384,
+        "width": 224,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -448
+      ],
+      "id": "a9d8de3f-bad4-4e64-901d-d17f01b7f9fc",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "1325895b-7706-4499-8f8e-ff5e13fa0a8b",
+      "name": "Mark a message as read",
+      "webhookId": "12c556c8-144b-446f-a046-2df1e63d8267",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RscFzlfGXiR1K3zX",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "wrutfqmO9o8vu5PX",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/wrutfqmO9o8vu5PX",
+          "cachedResultName": "Negative SDR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CompanyName": "={{ $('Get Company Info').item.json.companyName }}",
+            "From": "={{ $('Edit Fields').item.json.From }}",
+            "Stage": "={{ $('Get Company Info').item.json.stage }}",
+            "MessageID": "={{ $('Gmail Trigger').item.json.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "MessageID",
+              "displayName": "MessageID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "CompanyName",
+              "displayName": "CompanyName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        192
+      ],
+      "id": "81acf427-7b8f-4438-9096-5a1ceed7d012",
+      "name": "Call 'Negative SDR'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Get Company Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Call 'Positive SDR'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Negative SDR'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark a message as read": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "919dc075-55c9-46af-a07e-8a3db9358fe8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f5b84564547c7d715869f374d080912329664c65e6aac413388ae6c1966629a9"
+  },
+  "id": "ZeLyco0vY1mjHgek",
+  "tags": []
+}
